@@ -1,0 +1,16 @@
+Upload The SBOM Using API
+
+We have to use API while we use the platform with GitHub Action.
+
+curl --location 'http://localhost:8081/api/v1/bom' \
+--header 'X-Api-Key: <API_KEY>' \
+--form 'project="<PROJECT_ID>"' \
+--form 'bom=@"/path/to/SBOM/file"'
+
+
+To get the API key go to http://localhost:8080/admin/accessManagement/teams and select automation team. Keep the API key secure.
+
+
+dependency track project1 id: 5824cbeb-7499-49f1-b6a1-09219ffa6274
+automation team api key: odt_eeaHmJCQ_JOhMDDIQ4Nsppx89LalxLYMQI3DqoQ1n
+
