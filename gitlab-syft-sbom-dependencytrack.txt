@@ -1,0 +1,77 @@
+stages:
+  - sbom
+  - upload
+
+variables:
+  DT_HOST: "https://dependency-track.yourdomain.com"
+  DT_API_KEY: "$DEPENDENCY_TRACK_API_KEY"
+  PROJECT_NAME: "$CI_PROJECT_NAME"
+  PROJECT_VERSION: "${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}}"
+
+syft-sbom-generate:
+  stage: sbom
+  image: anchore/syft:latest
+  script:
+    # Generate SBOM from different sources
+    
+    # Option 1: Generate from Docker image
+    - syft $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -o cyclonedx-json=sbom.json
+    
+    # Option 2: Generate from directory (for built artifacts)
+    - syft dir:. -o cyclonedx-json=sbom.json
+    
+    # Option 3: Generate from container archive
+    # - syft docker-archive:app.tar -o cyclonedx-json=sbom.json
+    
+    # Option 4: Generate from OCI registry
+    # - syft registry:nginx:latest -o cyclonedx-json=sbom.json
+    
+    # View SBOM summary
+    - echo "SBOM generated with $(jq '.components | length' sbom.json) components"
+  artifacts:
+    paths:
+      - sbom.json
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "schedule"  # For scheduled scans
+
+upload-to-dtrack:
+  stage: upload
+  image: curlimages/curl:latest
+  needs: ["syft-sbom-generate"]
+  script:
+    - |
+      # Function to upload SBOM
+      upload_sbom() {
+        echo "Uploading SBOM to Dependency-Track..."
+        
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT "$DT_HOST/api/v1/bom" \
+          -H "X-API-Key: $DT_API_KEY" \
+          -H "Content-Type: multipart/form-data" \
+          -F "projectName=$PROJECT_NAME" \
+          -F "projectVersion=$PROJECT_VERSION" \
+          -F "autoCreate=true" \
+          -F "bom=@sbom.json")
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
+        
+        if [ "$HTTP_CODE" -eq 200 ]; then
+          echo "✓ SBOM uploaded successfully"
+          TOKEN=$(echo "$RESPONSE_BODY" | jq -r '.token')
+          echo "BOM Token: $TOKEN"
+          echo "Project: $PROJECT_NAME:$PROJECT_VERSION"
+        else
+          echo "✗ Failed to upload SBOM"
+          echo "HTTP Code: $HTTP_CODE"
+          echo "Response: $RESPONSE_BODY"
+          exit 1
+        fi
+      }
+      
+      upload_sbom
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
