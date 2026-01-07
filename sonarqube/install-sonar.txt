@@ -1,0 +1,20 @@
+$ docker run -d --name sonarqube -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true -p 9000:9000 -p 9092:9092 sonarqube:9.4.0-community
+*** Once your instance is up and running, Log in to http://localhost:9000 using System Administrator credentials:
+
+    login: admin
+    password: admin
+***
+Analyzing a Project
+-------------------
+Now that you're logged in to your local SonarQube instance, let's analyze a project:
+
+    Click the Create new project button.
+    Give your project a Project key and a Display name and click the Set Up button.
+    Under Provide a token, select Generate a token. Give your token a name, click the Generate button, 
+	and click Continue.
+    Select your project's main language under Run analysis on your project, and follow the instructions 
+	to analyze your project.
+
+
+jenkins-token : ab556500575c78014e2dcf502c2ab4bf45f7afc1
+project1-token2: 1b1b44b5f260ee0315d00e871e35dd5c60d89b5f

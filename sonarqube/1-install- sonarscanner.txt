@@ -1,0 +1,220 @@
+Method 1: Install via Package Manager (Recommended)
+Install Java 11+ (Required)
+bash
+
+# Update package list
+sudo apt update
+
+# Install Java 11 or 17
+sudo apt install openjdk-11-jdk -y
+# or
+sudo apt install openjdk-17-jdk -y
+
+# Verify Java installation
+java -version
+
+
+**********************************************  Install SonarScanner
+
+# Download the latest SonarScanner
+wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+
+# Or for a specific version (check for latest at: https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/)
+# wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+
+# Install unzip if not present
+sudo apt install unzip -y
+
+# Extract to /opt
+sudo unzip sonar-scanner-cli-*.zip -d /opt
+
+# Rename for convenience
+sudo mv /opt/sonar-scanner-* /opt/sonar-scanner
+
+Configure Environment Variables
+-------------------------------
+# Add to PATH
+echo 'export PATH=$PATH:/opt/sonar-scanner/bin' | sudo tee -a /etc/profile.d/sonar-scanner.sh
+
+# Make it executable
+sudo chmod +x /etc/profile.d/sonar-scanner.sh
+
+# Load immediately in current session
+source /etc/profile.d/sonar-scanner.sh
+
+Verify Installation
+--------------------
+sonar-scanner --version
+
+# nano /opt/sonar-scanner/conf/sonar-scanner.properties
+sonar.host.url=http://localhost:9000
+#sonar.sourceEncoding=UTF-8
+sonar.login=5eb9981feefa21677b9a8eb6f1b0f7e296e16198
+#sonar.java.home=/usr/lib/jvm/java-11-openjdk-amd64
+sonar.projectKey=maven-code-coverage
+sonar.java.binaries=target/classes
+sonar.exclusions=**/*.xml,**/*.yml,**/*.properties
+
+# cd maven-code-coverage
+# sonar-scanner
+
+*****************************************************************************************************************
+
+
+Method 2: Install via APT (Alternative)
+bash
+
+# Add SonarSource repository
+echo "deb https://packages.atlassian.com/debian/atlassian-sdk-deb/ stable contrib" | sudo tee /etc/apt/sources.list.d/atlassian-sdk.list
+
+# Add GPG key
+wget -qO - https://packages.atlassian.com/api/gpg/key/public | sudo apt-key add -
+
+# Update and install
+sudo apt update
+sudo apt install sonar-scanner -y
+
+Method 3: Manual Installation with Docker
+
+If you prefer Docker:
+bash
+
+# Pull SonarScanner image
+docker pull sonarsource/sonar-scanner-cli:latest
+
+# Create alias for easier use
+echo "alias sonar-scanner='docker run --rm -v \$(pwd):/usr/src sonarsource/sonar-scanner-cli'" >> ~/.bashrc
+source ~/.bashrc
+
+Configure SonarScanner
+Global Configuration
+bash
+
+# Edit global configuration
+sudo nano /opt/sonar-scanner/conf/sonar-scanner.properties
+
+Add your SonarQube server details:
+properties
+
+# Configure SonarQube server URL
+sonar.host.url=http://localhost:9000
+
+# Authentication token (if secured)
+# sonar.login=your-sonarqube-token
+
+# JDK path (if needed)
+# sonar.java.home=/usr/lib/jvm/java-11-openjdk-amd64
+
+Project Configuration
+
+Create sonar-project.properties in your project root:
+bash
+
+cat > sonar-project.properties << EOF
+# Project identification
+sonar.projectKey=myproject:myapp
+sonar.projectName=My Application
+sonar.projectVersion=1.0
+
+# Source code location
+sonar.sources=src
+sonar.java.binaries=target/classes
+sonar.java.libraries=target/dependency/*.jar
+
+# Language
+sonar.language=java
+sonar.sourceEncoding=UTF-8
+
+# Exclusions
+sonar.exclusions=**/test/**,**/*Test.java
+EOF
+
+Usage Examples
+Basic Scan
+bash
+
+# Navigate to project directory
+cd /path/to/your/project
+
+# Run scan
+sonar-scanner
+
+With Custom Properties
+bash
+
+sonar-scanner \
+  -Dsonar.projectKey=myproject \
+  -Dsonar.projectName="My Project" \
+  -Dsonar.sources=src \
+  -Dsonar.host.url=http://sonarqube-server:9000 \
+  -Dsonar.login=sqp_xxxxxxxxxxxxxxxxxxxx
+
+Scan with Maven Project
+bash
+
+# First build your project
+mvn clean compile
+
+# Then scan
+sonar-scanner \
+  -Dsonar.projectKey=maven-project \
+  -Dsonar.sources=src/main/java \
+  -Dsonar.java.binaries=target/classes \
+  -Dsonar.java.libraries=target/dependency/*.jar
+
+Create a Wrapper Script
+
+Create a convenient script:
+bash
+
+cat > ~/bin/scan-project << 'EOF'
+#!/bin/bash
+PROJECT_DIR=$(pwd)
+PROJECT_NAME=$(basename "$PROJECT_DIR")
+
+# Create sonar-project.properties if not exists
+if [ ! -f "sonar-project.properties" ]; then
+    echo "Creating sonar-project.properties..."
+    cat > sonar-project.properties << EOL
+sonar.projectKey=${PROJECT_NAME}
+sonar.projectName=${PROJECT_NAME}
+sonar.projectVersion=1.0
+sonar.sources=.
+sonar.sourceEncoding=UTF-8
+EOL
+fi
+
+echo "Scanning project: ${PROJECT_NAME}"
+sonar-scanner
+EOF
+
+chmod +x ~/bin/scan-project
+
+Test Installation
+bash
+
+# Test with a simple project
+mkdir -p ~/test-sonar/src
+cd ~/test-sonar
+
+# Create a simple Java file
+cat > src/HelloWorld.java << 'EOF'
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello, SonarScanner!");
+    }
+}
+EOF
+
+# Create properties file
+cat > sonar-project.properties << EOF
+sonar.projectKey=test-sonar
+sonar.projectName=Test Sonar Project
+sonar.projectVersion=1.0
+sonar.sources=src
+sonar.java.binaries=.
+sonar.language=java
+EOF
+
+# Run scan (will fail if SonarQube server not running, but scanner will work)
+sonar-scanner -Dsonar.host.url=http://localhost:9000

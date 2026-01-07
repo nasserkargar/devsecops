@@ -1,0 +1,71 @@
+# nano ~/.m2/settings.xml
+<settings>
+    <profiles>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>sonarsource</id>
+                    <url>https://packages.atlassian.com/maven-public</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>sonarsource</id>
+                    <url>https://packages.atlassian.com/maven-public</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+</settings>
+
+Download and Install Manually
+------------------------------
+
+If repositories are blocked:
+
+    Download the plugin JAR from: https://packages.atlassian.com/maven-public/org/sonarsource/scanner/maven/sonar-maven-plugin/
+
+    Install locally:
+
+mvn install:install-file \
+  -Dfile=sonar-maven-plugin-3.10.0.2594.jar \
+  -DgroupId=org.sonarsource.scanner.maven \
+  -DartifactId=sonar-maven-plugin \
+  -Dversion=3.10.0.2594 \
+  -Dpackaging=jar
+
+Use System-Wide Sonar Scanner
+-----------------------------
+
+Instead of Maven plugin, use standalone scanner:
+
+    Download from: https://docs.sonarqube.org/latest/analysis/scan/sonarscanner/
+
+    Extract and add to PATH
+
+    Create sonar-project.properties:
+
+properties
+
+sonar.projectKey=my-project
+sonar.projectName=My Project
+sonar.projectVersion=1.0
+sonar.sources=src/main/java
+sonar.java.binaries=target/classes
+
+    Run:
+
+bash
+
+mvn clean verify
+sonar-scanner
